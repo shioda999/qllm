@@ -113,16 +113,16 @@ def calc_act_scales(model, tokenizer, dataset, seq_len=512, num_samples=256, mod
 
     return act_scales
 
-def get_act_scales(model, tokenizer, dataset, prefix, seq_len=512, num_samples=256, mode="max", hack=True):
+def get_act_scales(model, tokenizer, dataset, prefix, seq_len=512, num_samples=256, mode="max"):
     dir = os.path.dirname(__file__) + "/tmp"
     os.makedirs(dir, exist_ok=True)
     if prefix is None:
-        act_scales = calc_act_scales(model, tokenizer, dataset, seq_len, num_samples=num_samples, mode=mode, hack=hack)
+        act_scales = calc_act_scales(model, tokenizer, dataset, seq_len, num_samples=num_samples, mode=mode)
     else:
         path = f'{dir}/{prefix}_act_scales.pickle'
         print(path)
         if not os.path.exists(path):
-            act_scales = calc_act_scales(model, tokenizer, dataset, seq_len, num_samples=num_samples, mode=mode, hack=hack)
+            act_scales = calc_act_scales(model, tokenizer, dataset, seq_len, num_samples=num_samples, mode=mode)
             with open(path, 'wb') as f:
                 pickle.dump(act_scales, f)
         else:
