@@ -23,7 +23,7 @@ def apply_rotate_vo_proj(model, act_scales):
     dtype = next(model.parameters()).dtype
     for name, module in model.named_modules():
         if isinstance(module, Phi3DecoderLayer):
-            n_heads = module.self_attn.num_heads
+            n_heads = module.self_attn.num_key_value_heads
             w_q, w_k, w_v = module.self_attn.qkv_proj.weight.chunk(3,0)
             w_o = module.self_attn.o_proj.weight
             metric = act_scales[name + '.self_attn.o_proj'].reshape(n_heads, -1)

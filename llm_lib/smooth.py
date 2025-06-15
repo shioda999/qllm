@@ -187,7 +187,7 @@ def smooth_qk_proj(model, act_scales, alpha=0.5, beta=0.):
     for name, m in model.named_modules():
         if isinstance(m, Phi3Attention):
             # pass
-            num_heads = m.num_heads
+            num_heads = m.num_key_value_heads
             w = m.qkv_proj.weight.data
             s_act = act_scales[name + ".qkv_proj_output"]
             s_w = w.abs().max(dim=1)[0]

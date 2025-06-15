@@ -19,10 +19,11 @@ def eval_ppl(model, tokenizer, device=torch.device("cuda:0"), datasets=["wikitex
             testdata = load_from_disk("./data/wikitext_test")
             if testdata is not None:
                 testloader = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
-                continue
-        _, testloader = get_loaders(
-            dataset, seed=0, seqlen=model.seqlen, tokenizer=tokenizer
-        )
+                
+        else:
+          _, testloader = get_loaders(
+              dataset, seed=0, seqlen=model.seqlen, tokenizer=tokenizer
+          )
         # Print status
         print(f"evaluating on {dataset}")
         # Evaluate ppl in no grad context to avoid updating the model
