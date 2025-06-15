@@ -90,7 +90,7 @@ def quantize(args, model ,tokenizer):
     convert_mlp(model)
 
     if args.rotate:
-        act_scales = get_act_scales(model, tokenizer, dataset, "calib1_v2", seq_len=seq_len, mode="topk")
+        act_scales = get_act_scales(model, tokenizer, dataset, "calib1", seq_len=seq_len, mode="topk")
         apply_rotate_vo_proj(model, act_scales)
         smooth_qk_proj(model, act_scales, 0.5)
         apply_rotate_qk_proj(model)
@@ -98,7 +98,7 @@ def quantize(args, model ,tokenizer):
         apply_rotate(model, Q)
 
     if args.smooth:
-        act_scales = get_act_scales(model, tokenizer, dataset, "calib2_v2", seq_len=seq_len, mode="topk")
+        act_scales = get_act_scales(model, tokenizer, dataset, "calib2", seq_len=seq_len, mode="topk")
         smooth_qk_proj(model, act_scales, 0.5)
         smooth_vo_proj(model, act_scales, 0.25)
         smooth_ln_qkv(model, act_scales, 0.5, 0.5)
