@@ -1,0 +1,46 @@
+{
+  "builder_name": "json",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "c4",
+  "dataset_size": 101515791,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/allenai/c4@1588ec454efa1a09f29cd18ddd04fe05fc8653a2/en/c4-validation.00000-of-00008.json.gz": {
+      "num_bytes": 40471190,
+      "checksum": null
+    }
+  },
+  "download_size": 40471190,
+  "features": {
+    "text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "timestamp": {
+      "dtype": "timestamp[s]",
+      "_type": "Value"
+    },
+    "url": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 141986981,
+  "splits": {
+    "validation": {
+      "name": "validation",
+      "num_bytes": 101515791,
+      "num_examples": 45576,
+      "dataset_name": "c4"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

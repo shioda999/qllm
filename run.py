@@ -85,7 +85,7 @@ def quantize(args, model ,tokenizer):
     #     'allenai/c4', data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'}, split='validation',
     #     # download_mode="force_redownload"
     # )
-    dataset = load_from_disk("./subset_c4")
+    dataset = load_from_disk("./data/subset_c4")
 
     convert_mlp(model)
 
@@ -118,31 +118,26 @@ def quantize(args, model ,tokenizer):
     if args.gptq:
         apply_gptq(model, tokenizer, dataset)
 
+def eval(args, model, tokenizer):
+    if args.text_gen:
+        with ExecutionTimer():
+            test_text_generation(model, tokenizer)
+            
+    if args.eval_ppl:
+        with ExecutionTimer():
+            model.seqlen = 2048
+            eval_ppl(model, tokenizer, datasets=["wikitext2"])
+
 def main():
     args = get_args()
     set_seed(args.seed)
     model, tokenizer = load_model(args.model)
     
-    if args.text_gen:
-        with ExecutionTimer():
-            test_text_generation(model, tokenizer)
-            
-    if args.eval_ppl:
-        with ExecutionTimer():
-            model.seqlen = 2048
-            eval_ppl(model, tokenizer, datasets=["wikitext2"])
-
-    # 量子化
+    eval(args, model, tokenizer)
+    
     quantize(args, model, tokenizer)
 
-    if args.text_gen:
-        with ExecutionTimer():
-            test_text_generation(model, tokenizer)
-            
-    if args.eval_ppl:
-        with ExecutionTimer():
-            model.seqlen = 2048
-            eval_ppl(model, tokenizer, datasets=["wikitext2"])
+    eval(args, model, tokenizer)
     
 if __name__ == '__main__':
     main()

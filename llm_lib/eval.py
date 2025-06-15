@@ -16,7 +16,7 @@ def eval_ppl(model, tokenizer, device=torch.device("cuda:0"), datasets=["wikitex
     results = {}
     for dataset in datasets:
         if dataset == "wikitext2":
-            testdata = load_from_disk("./wikitext_test")
+            testdata = load_from_disk("./data/wikitext_test")
             if testdata is not None:
                 testloader = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
                 continue
