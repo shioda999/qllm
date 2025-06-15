@@ -10,7 +10,7 @@ def apply_rotate_qk_proj(model, act_scales=None):
     Q = torch.tensor([[1,-1],[1,1]], device=model.device)/math.sqrt(2)
     for name, module in model.named_modules():
         if isinstance(module, Phi3DecoderLayer):
-            n_heads = module.self_attn.num_heads
+            n_heads = module.self_attn.num_key_value_heads
             # s_q, s_k, s_v = act_scales[name + '.self_attn.qkv_proj_output'].chunk(3,0)
             w_q, w_k, w_v = module.self_attn.qkv_proj.weight.chunk(3,0)
             dim = w_q.shape[-1]
