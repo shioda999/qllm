@@ -14,6 +14,7 @@ from .gptq import GPTQ
 import torch
 import psutil
 import torch.nn.quantized.functional as qF
+import torch.nn.quantized as nnq
 
 def print_memory_usage():
     """CPUとGPUのメモリ使用量を表示"""
@@ -77,12 +78,12 @@ class QLinear(nn.Linear):
         self.w_q = make_quantizer(device, w_scale)
         self.o_q = make_quantizer(device, o_scale)
         self.name = name
+        w = nn.Parameter(self.w_q(self.weight))
+        self.qlinear = nnq.Linear(*w.shape)
     
     def forward(self, x):
         x = self.in_q(x)#.float())
-        w = self.weight
-        w = self.w_q(w)#.float())
-        o = qF.linear(x, w).dequantize()
+        o = qF.linear(x, self.qlinear).dequantize()
         #o = nn.functional.linear(x, w, self.bias)
         o = self.o_q(o).dequantize()
         if hasattr(self, 'm'): o.mul_(self.m)
