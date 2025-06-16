@@ -13,6 +13,7 @@ from .squant import squant_flip, squant_flip_aware_act_scale
 from .gptq import GPTQ
 import torch
 import psutil
+import torch.nn.quantized.functional as qF
 
 def print_memory_usage():
     """CPUとGPUのメモリ使用量を表示"""
@@ -47,7 +48,8 @@ class Quantizer(nn.Module):
         self.Qp, self.Qn = 127, -128
 
     def forward(self, x):
-        return x.div(self.scale).clamp_(self.Qn, self.Qp).round_().mul_(self.scale)
+        return torch.quantize_per_tensor(x.float(), self.scale.data, self.zero_point.data, dtype=torch.qint8)
+        # return x.div(self.scale).clamp_(self.Qn, self.Qp).round_().mul_(self.scale)
         # y = (x.float() / self.scale).clamp(self.Qn, self.Qp).round() * self.scale
         # y = round_ste(x.float().div(self.scale)).clamp(self.Qn, self.Qp).mul(self.scale).to(x.dtype)
         # return y
@@ -78,34 +80,14 @@ class QLinear(nn.Linear):
     
     def forward(self, x):
         x = self.in_q(x)#.float())
-        w = self.weight if not hasattr(self, "get_weights") else self.get_weights()
+        w = self.weight
         w = self.w_q(w)#.float())
-        o = nn.functional.linear(x, w, self.bias)
-        o = self.o_q(o)
+        o = qF.linear(x, w).dequantize()
+        #o = nn.functional.linear(x, w, self.bias)
+        o = self.o_q(o).dequantize()
         if hasattr(self, 'm'): o.mul_(self.m)
         # print(self.name, x.shape, w.shape, o.shape)
         # input()
-        return o
-    
-class QLinearv2(nn.Linear):
-    def add_quantizer(self, device, in_scale, w_scale, o_scale=None):
-        self.w_q = make_quantizer(device, w_scale)
-        self.o_q = make_quantizer(device, o_scale)
-        self.in_q = nn.Identity()
-    
-    def dynamic_quant(self, x):
-        scale = x.reshape(-1, x.shape[-1]).abs().max(dim=-1, keepdim=True)[0] / 127
-        x = (x / scale).clamp(-128, 127).round()
-        return x, scale
-
-    def forward(self, x):
-        x, scale = self.dynamic_quant(x.float())
-        w = self.weight
-        w = self.w_q(w.float())
-        o = nn.functional.linear(x, w, self.bias)
-        # print(o.reshape(-1, o.shape[-1]).abs().max(dim=-1, keepdim=True)[0].div_(127), self.o_q.scale)
-        # input()
-        o = self.o_q(o) * scale
         return o
     
 def get_depth(name):
@@ -145,10 +127,7 @@ def quantize_model(model, act_scales={}, mode="static", down_proj_in_scale_mul=0
                     o_scale *= 0.5
                     w_scale *= 0.5
                 
-                if mode == "dynamic":
-                    m.__class__ = QLinearv2
-                    o_scale = o_scale / in_scale
-                elif mode == "down_proj_none":
+                if mode == "down_proj_none":
                     if name.endswith('down_proj'):
                         o_scale = "none"
                 elif mode == "out_none":
@@ -288,7 +267,7 @@ def hack_attn_forward(model, act_scales, softmax_quant_mode="attn_split"):
                 pass
             else:
                 assert ValueError(), m.mode
-                
+
 def plot_bin(t):
     import matplotlib.pyplot as plt
     import numpy as np
