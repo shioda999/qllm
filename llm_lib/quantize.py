@@ -11,10 +11,11 @@ from transformers.models.phi3.modeling_phi3 import Phi3Attention, Phi3MLP, apply
 from transformers.cache_utils import Cache
 from .squant import squant_flip, squant_flip_aware_act_scale
 from .gptq import GPTQ
+from .marlin_linear import MarlinLinear
 import torch
 import psutil
-import torch.nn.quantized.functional as qF
-import torch.nn.quantized as nnq
+# import torch.nn.quantized.functional as qF
+# import torch.nn.quantized as nnq
 
 def print_memory_usage():
     """CPUとGPUのメモリ使用量を表示"""
@@ -78,14 +79,13 @@ class QLinear(nn.Linear):
         self.w_q = make_quantizer(device, w_scale)
         self.o_q = make_quantizer(device, o_scale)
         self.name = name
-        w = nn.Parameter(self.w_q(self.weight))
-        self.qlinear = nnq.Linear(*w.shape)
+        # qw = self.w_q(self.weight)
+        self.qlinear = MarlinLinear(1, self.weight)
     
     def forward(self, x):
-        x = self.in_q(x)#.float())
-        o = qF.linear(x, self.qlinear).dequantize()
-        #o = nn.functional.linear(x, w, self.bias)
-        o = self.o_q(o).dequantize()
+        # x = self.in_q(x)#.float())
+        o = self.qlinear(x)
+        # o = self.o_q(o).dequantize()
         if hasattr(self, 'm'): o.mul_(self.m)
         # print(self.name, x.shape, w.shape, o.shape)
         # input()
