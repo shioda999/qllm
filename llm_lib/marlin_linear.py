@@ -1,4 +1,11 @@
 import marlin
+import torch
+import functools
+import operator
+
+
+def prod(shape):
+    return functools.reduce(operator.mul, shape, 1)
 
 def gen_quant4(w, groupsize=-1, dev=torch.device("cuda")):
     tile = 16
@@ -40,11 +47,9 @@ def gen_quant4(w, groupsize=-1, dev=torch.device("cuda")):
     return ref, q, s
 
 class MarlinLinear:
-  def __init__(self, batch_sz, w):
-      n = batch_sz
+  def __init__(self, w):
       k, m = w.shape
-      self.C = torch.zeros((n, m), dtype=torch.half, device=dev)
-      self.workspace = torch.zeros(m // 128 * 16, device=dev)
+      self.workspace = torch.zeros(m // 128 * 16, device=w.device)
       self.groupsize = -1 # 128
       
       gpu = torch.cuda.get_device_name(0)
@@ -65,8 +70,10 @@ class MarlinLinear:
       self.thread_k = thread_k
       self.thread_n = thread_n
       self.sms = sms
-      self.w_ref, self.qw, self.s = gen_quant4(w, groupsize=self.groupsize, dev=dev)
+      self.m = m
+      self.w_ref, self.qw, self.s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
     
   def __call__(self, x):
-      marlin.mul(x.view(-1, x.shape[-1]), self.qw, self.C, self.s, self.workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
-      return self.C.view(x.shape[:-1], -1)
+      C = torch.zeros((prod(x.shape[:-1]), self.m), dtype=torch.half, device=x.device)
+      marlin.mul(x.view(-1, x.shape[-1]), self.qw, C, self.s, self.workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
+      return C.reshape(x.shape[:-1] + (-1,))

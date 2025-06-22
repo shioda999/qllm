@@ -90,7 +90,8 @@ def quantize(args, model ,tokenizer):
     convert_mlp(model)
 
     if args.rotate:
-        act_scales = get_act_scales(model, tokenizer, dataset, "calib1", seq_len=seq_len, mode="topk")
+        act_scales = get_act_scales(model, tokenizer, dataset, None, seq_len=seq_len, mode="topk")
+        # act_scales = get_act_scales(model, tokenizer, dataset, "calib1", seq_len=seq_len, mode="topk")
         apply_rotate_vo_proj(model, act_scales)
         smooth_qk_proj(model, act_scales, 0.5)
         apply_rotate_qk_proj(model)
@@ -98,7 +99,8 @@ def quantize(args, model ,tokenizer):
         apply_rotate(model, Q)
 
     if args.smooth:
-        act_scales = get_act_scales(model, tokenizer, dataset, "calib2", seq_len=seq_len, mode="topk")
+        act_scales = get_act_scales(model, tokenizer, dataset, None, seq_len=seq_len, mode="topk")
+        # act_scales = get_act_scales(model, tokenizer, dataset, "calib2", seq_len=seq_len, mode="topk")
         smooth_qk_proj(model, act_scales, 0.5)
         smooth_vo_proj(model, act_scales, 0.25)
         smooth_ln_qkv(model, act_scales, 0.5, 0.5)
@@ -128,14 +130,37 @@ def eval(args, model, tokenizer):
             model.seqlen = 2048
             eval_ppl(model, tokenizer, datasets=["wikitext2"])
 
+def benchmark(f, warmup=1, iter=10):
+    for i in range(warmup + iter):
+        f()
+        if i == warmup - 1:
+            torch.cuda.synchronize()
+            tick = time.time()
+    torch.cuda.synchronize()
+    res = (time.time() - tick) / iter
+    time.sleep(1.)
+    return res
+
+def test(model, tokenizer):
+  input_text = "Hello"
+  print("!!!", input_text)
+  input_ids = tokenizer.encode(input_text, return_tensors="pt").cuda()
+  # with ExecutionTimer():
+  #     model.model(input_ids)
+  print("exection time:", benchmark(lambda: model.model(input_ids)))
+
 def main():
     args = get_args()
     set_seed(args.seed)
     model, tokenizer = load_model(args.model)
     
+    test(model, tokenizer)
+
     eval(args, model, tokenizer)
     
     quantize(args, model, tokenizer)
+
+    test(model, tokenizer)
 
     eval(args, model, tokenizer)
     

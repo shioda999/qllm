@@ -14,6 +14,7 @@ from .gptq import GPTQ
 from .marlin_linear import MarlinLinear
 import torch
 import psutil
+
 # import torch.nn.quantized.functional as qF
 # import torch.nn.quantized as nnq
 
@@ -80,11 +81,16 @@ class QLinear(nn.Linear):
         self.o_q = make_quantizer(device, o_scale)
         self.name = name
         # qw = self.w_q(self.weight)
-        self.qlinear = MarlinLinear(1, self.weight)
+        self.qlinear = MarlinLinear(self.weight.T)
     
     def forward(self, x):
+        if self.weight.shape[0] > 30000:
+          return torch.nn.functional.linear(x, self.weight)
         # x = self.in_q(x)#.float())
+        # if not hasattr(self, "qlinear"):
+          # self.qlinear = MarlinLinear(product(x.shape[1:-1]), self.weight.T)
         o = self.qlinear(x)
+        # o = torch.concat([self.qlinear(x[:,i:i+1]) for i in range(x.shape[1])], dim=1)
         # o = self.o_q(o).dequantize()
         if hasattr(self, 'm'): o.mul_(self.m)
         # print(self.name, x.shape, w.shape, o.shape)
@@ -102,6 +108,7 @@ def quantize_model(model, act_scales={}, mode="static", down_proj_in_scale_mul=0
         if isinstance(m, nn.Linear):
             #print(name, get_depth(name))
             m.__class__ = QLinear
+            m.name = name
 
             if fp32:
                 in_scale = "none"
