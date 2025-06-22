@@ -50,7 +50,7 @@ class MarlinLinear:
   def __init__(self, w):
       k, m = w.shape
       self.workspace = torch.zeros(m // 128 * 16, device=w.device)
-      self.groupsize = -1 # 128
+      self.groupsize = 128 # -1 # 128
       
       gpu = torch.cuda.get_device_name(0)
       if 'A100' in gpu:
@@ -76,4 +76,4 @@ class MarlinLinear:
   def __call__(self, x):
       C = torch.zeros((prod(x.shape[:-1]), self.m), dtype=torch.half, device=x.device)
       marlin.mul(x.view(-1, x.shape[-1]), self.qw, C, self.s, self.workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
-      return C.reshape(x.shape[:-1] + (-1,))
+      return C.view(x.shape[:-1] + (-1,))
