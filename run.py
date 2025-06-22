@@ -142,7 +142,7 @@ def benchmark(f, warmup=1, iter=10):
     return res
 
 def test(model, tokenizer):
-  input_text = "Hello"
+  input_text = "Hello. I am sleepy. This is test script. " * 10
   print("!!!", input_text)
   input_ids = tokenizer.encode(input_text, return_tensors="pt").cuda()
   # with ExecutionTimer():
