@@ -15,6 +15,7 @@ from llm_lib.quantize import quantize_model, hack_attn_forward, apply_gptq
 # from llm_lib.debug import check_matmul_shape
 
 from llm_lib.eval import eval_ppl
+from llm_lib.marlin_linear import MarlinLinear
 # from llm_lib.run_qa_task import run_qa_task
 # from llm_lib.run_lm_eval import run_lm_eval
 import time
@@ -88,19 +89,18 @@ def quantize(args, model ,tokenizer):
     dataset = load_from_disk("./data/subset_c4")
 
     convert_mlp(model)
-
+    act_scales = get_act_scales(model, tokenizer, dataset, "calib3", seq_len=seq_len, mode="topk")
+    
     if args.rotate:
-        act_scales = get_act_scales(model, tokenizer, dataset, None, seq_len=seq_len, mode="topk")
-        # act_scales = get_act_scales(model, tokenizer, dataset, "calib1", seq_len=seq_len, mode="topk")
         apply_rotate_vo_proj(model, act_scales)
         smooth_qk_proj(model, act_scales, 0.5)
         apply_rotate_qk_proj(model)
         Q = get_rotate_mat(model, act_scales)
         apply_rotate(model, Q)
+        act_scales = get_act_scales(model, tokenizer, dataset, None, seq_len=seq_len, mode="topk")
+        # act_scales = get_act_scales(model, tokenizer, dataset, "calib1", seq_len=seq_len, mode="topk")
 
     if args.smooth:
-        act_scales = get_act_scales(model, tokenizer, dataset, None, seq_len=seq_len, mode="topk")
-        # act_scales = get_act_scales(model, tokenizer, dataset, "calib2", seq_len=seq_len, mode="topk")
         smooth_qk_proj(model, act_scales, 0.5)
         smooth_vo_proj(model, act_scales, 0.25)
         smooth_ln_qkv(model, act_scales, 0.5, 0.5)
@@ -108,13 +108,14 @@ def quantize(args, model ,tokenizer):
         # smooth_down_proj_out(model, act_scales, 1.0, 0.25)
         # smooth_down_proj(model, act_scales, 0.5, 0.25)
         # smooth_head(model, act_scales, 0.5, 0.5)
+        act_scales = get_act_scales(model, tokenizer, dataset, None, seq_len=seq_len, mode="topk")
+        # act_scales = get_act_scales(model, tokenizer, dataset, "calib2", seq_len=seq_len, mode="topk")
 
         smooth_down_proj_out(model, act_scales, 1.0, 0.25)
         smooth_down_proj(model, act_scales, 0.5, 0.25)
         smooth_ln_gate_up(model, act_scales, 0.5, 0.5)
         smooth_head(model, act_scales, 0.5, 0.5)
     
-    # act_scales = get_act_scales(model, tokenizer, dataset, "calib3", seq_len=seq_len, mode="topk")
     quantize_model(model, act_scales, down_proj_in_scale_mul=0.5)
     
     if args.gptq:
@@ -149,20 +150,53 @@ def test(model, tokenizer):
   #     model.model(input_ids)
   print("exection time:", benchmark(lambda: model.model(input_ids)))
 
+def call_linear(model, x):
+  for m in model.modules():
+    if isinstance(m, torch.nn.Linear):
+        m(x[:,:m.weight.shape[-1]])
+
+def call_attn(model, x):
+  for m in model.modules():
+    if hasattr(m, "qkv_proj"):
+        m(x[:,:3072])
+
+def call_mlp(model, x):
+  for m in model.modules():
+    if hasattr(m, "down_proj"):
+        m(x[:,:3072])
+        
+def call_norm(model, x):
+  for m in model.modules():
+    if hasattr(m, "eps"):
+        m(x[:,:3072])
+
+def test2(model):
+  x = torch.randn((1,9216), dtype=torch.half).cuda()
+  print("exection time:", benchmark(lambda: call_linear(model, x)))
+  print("exection time:", benchmark(lambda: call_attn(model, x)))
+  print("exection time:", benchmark(lambda: call_mlp(model, x)))
+  print("exection time:", benchmark(lambda: call_norm(model, x)))
+
 def main():
     args = get_args()
     set_seed(args.seed)
     model, tokenizer = load_model(args.model)
     
     test(model, tokenizer)
-
-    eval(args, model, tokenizer)
+    test2(model)
+    # eval(args, model, tokenizer)
     
     quantize(args, model, tokenizer)
 
     test(model, tokenizer)
+    test2(model)
 
-    eval(args, model, tokenizer)
+    # eval(args, model, tokenizer)
     
 if __name__ == '__main__':
     main()
+
+
+
+# TODO
+# attn, mlp, norm, linearごとでtimeをとる
