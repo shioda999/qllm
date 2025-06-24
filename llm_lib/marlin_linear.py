@@ -73,17 +73,18 @@ class MarlinLinear:
         self.m = m
         self.w_ref, self.qw, self.s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
         
-        self.C = torch.zeros((self.m,), dtype=torch.half, device=w.device)
+        self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
     
     def __call__(self, x):
         shape = x.shape
         x = x.view(-1, x.shape[-1])
-        if self.C.numel() != x.shape[0] * self.m:
-            self.C = torch.empty((x.shape[0] * self.m), dtype=torch.half, device=x.device)
-        C = self.C[:x.shape[0] * self.m].reshape(-1, self.m)
+        if self.C.shape[0] < x.shape[0]:
+            print(self.C.shape, x.shape)
+            self.C = torch.empty((x.shape[0], self.m), dtype=torch.half, device=x.device)
+        C = self.C
         C.zero_()
         # C = torch.zeros((prod(x.shape[:-1]), self.m), dtype=torch.half, device=x.device)
         marlin.mul(x, self.qw, C, self.s, self.workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
-        C = C.view(shape[:-1] + (-1,))
+        C = C[:x.shape[0]].view(shape[:-1] + (-1,))
         # print(shape, C.shape)
         return C
