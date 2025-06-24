@@ -88,9 +88,10 @@ def quantize(args, model ,tokenizer):
     # )
     dataset = load_from_disk("./data/subset_c4")
 
-    convert_mlp(model)
-    act_scales = get_act_scales(model, tokenizer, dataset, "calib3", seq_len=seq_len, mode="topk")
-    
+    # convert_mlp(model)
+    # act_scales = get_act_scales(model, tokenizer, dataset, "calib3", seq_len=seq_len, mode="topk")
+    act_scales = {}
+        
     if args.rotate:
         apply_rotate_vo_proj(model, act_scales)
         smooth_qk_proj(model, act_scales, 0.5)
@@ -155,10 +156,15 @@ def call_linear(model, x):
     if isinstance(m, torch.nn.Linear):
         m(x[:,:m.weight.shape[-1]])
 
+def call_decoder(model, x):
+  for m in model.modules():
+    if hasattr(m, "self_attn"):
+        m(x[:,None,:3072], position_embeddings=(torch.zeros((1,)).half().cuda(), torch.zeros((1,)).half().cuda()), causal_mask=torch.zeros((1,1,1,1)).half().cuda())
+
 def call_attn(model, x):
   for m in model.modules():
     if hasattr(m, "qkv_proj"):
-        m(x[:,:3072])
+        m(x[:,None,:3072], (torch.zeros((1,)).half().cuda(), torch.zeros((1,)).half().cuda()), torch.zeros((1,1,1,1)).half().cuda())
 
 def call_mlp(model, x):
   for m in model.modules():
@@ -167,31 +173,34 @@ def call_mlp(model, x):
         
 def call_norm(model, x):
   for m in model.modules():
-    if hasattr(m, "eps"):
+    if hasattr(m, "variance_epsilon"):
         m(x[:,:3072])
 
 def test2(model):
   x = torch.randn((1,9216), dtype=torch.half).cuda()
-  print("exection time:", benchmark(lambda: call_linear(model, x)))
-  print("exection time:", benchmark(lambda: call_attn(model, x)))
-  print("exection time:", benchmark(lambda: call_mlp(model, x)))
-  print("exection time:", benchmark(lambda: call_norm(model, x)))
+  print("exection time  linear:", benchmark(lambda: call_linear(model, x)))
+  print("exection time decoder:", benchmark(lambda: call_decoder(model, x)))
+  print("exection time    attn:", benchmark(lambda: call_attn(model, x)))
+  print("exection time     mlp:", benchmark(lambda: call_mlp(model, x)))
+  print("exection time    norm:", benchmark(lambda: call_norm(model, x)))
 
 def main():
     args = get_args()
     set_seed(args.seed)
     model, tokenizer = load_model(args.model)
+    torch.compile(model.model)
     
     test(model, tokenizer)
     test2(model)
-    # eval(args, model, tokenizer)
+    eval(args, model, tokenizer)
     
     quantize(args, model, tokenizer)
+    torch.compile(model.model)
 
     test(model, tokenizer)
     test2(model)
 
-    # eval(args, model, tokenizer)
+    eval(args, model, tokenizer)
     
 if __name__ == '__main__':
     main()

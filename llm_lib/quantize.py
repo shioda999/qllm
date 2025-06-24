@@ -84,15 +84,15 @@ class QLinear(nn.Linear):
         self.qlinear = MarlinLinear(self.weight.T)
     
     def forward(self, x):
-        if self.weight.shape[0] > 30000:
-          return torch.nn.functional.linear(x, self.weight)
+        # if self.weight.shape[0] > 30000:
+          # return torch.nn.functional.linear(x, self.weight)
         # x = self.in_q(x)#.float())
         # if not hasattr(self, "qlinear"):
           # self.qlinear = MarlinLinear(product(x.shape[1:-1]), self.weight.T)
         o = self.qlinear(x)
         # o = torch.concat([self.qlinear(x[:,i:i+1]) for i in range(x.shape[1])], dim=1)
         # o = self.o_q(o).dequantize()
-        if hasattr(self, 'm'): o.mul_(self.m)
+        # if hasattr(self, 'm'): o.mul_(self.m)
         # print(self.name, x.shape, w.shape, o.shape)
         # input()
         return o
@@ -105,7 +105,7 @@ def get_depth(name):
 def quantize_model(model, act_scales={}, mode="static", down_proj_in_scale_mul=0.5, name_prefix="", fp32=False):
     device = next(model.parameters()).device
     for name, m in model.named_modules():
-        if isinstance(m, nn.Linear):
+        if isinstance(m, nn.Linear) and m.weight.shape[0] < 30000:
             #print(name, get_depth(name))
             m.__class__ = QLinear
             m.name = name
@@ -116,11 +116,11 @@ def quantize_model(model, act_scales={}, mode="static", down_proj_in_scale_mul=0
                 o_scale = "none"
             
             else:
-                scale = act_scales[name_prefix + name]
-                o_scale = act_scales[name_prefix + name + "_output"]
-                in_scale = calc_init_scale(scale, 127, method="minmax")
+                scale = 1.0 # act_scales[name_prefix + name]
+                o_scale = 1.0 # act_scales[name_prefix + name + "_output"]
+                in_scale = 1.0 # calc_init_scale(scale, 127, method="minmax")
                 w_scale = calc_init_scale(m.weight, 127, method="minmax")
-                o_scale = calc_init_scale(o_scale, 127, method="minmax")
+                o_scale = 1.0 # calc_init_scale(o_scale, 127, method="minmax")
 
                 if name.endswith('down_proj'):
                     in_scale *= down_proj_in_scale_mul
