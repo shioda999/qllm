@@ -49,8 +49,8 @@ def gen_quant4(w, groupsize=-1, dev=torch.device("cuda")):
 class MarlinLinear:
     def __init__(self, w):
         k, m = w.shape
-        self.workspace = torch.zeros(m // 128 * 16, device=w.device)
-        self.groupsize = 128 # -1 # 128
+        # self.workspace = torch.zeros(m // 128 * 16, device=w.device)
+        self.groupsize = -1 # 128
         
         gpu = torch.cuda.get_device_name(0)
         if 'A100' in gpu:
@@ -61,30 +61,32 @@ class MarlinLinear:
             SMS = 82
         elif 'A6000' in gpu:
             SMS = 84
-        elif 'L4' in gpu:
-            SMS = 48
+        # elif 'L4' in gpu:
+        #     SMS = 48
         else:
             SMS = -1
-        # thread_k, thread_n, sms = 256, 256, SMS
-        thread_k, thread_n, sms = -1, -1, SMS
+        thread_k, thread_n, sms = 128, 128, SMS
+        # thread_k, thread_n, sms = -1, -1, SMS
         self.thread_k = thread_k
         self.thread_n = thread_n
         self.sms = sms
         self.m = m
-        self.w_ref, self.qw, self.s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
+        _, self.qw, self.s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
         
-        self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
+        # self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
     
     def __call__(self, x):
         shape = x.shape
         x = x.view(-1, x.shape[-1])
-        if self.C.shape[0] < x.shape[0]:
-            print(self.C.shape, x.shape)
-            self.C = torch.empty((x.shape[0], self.m), dtype=torch.half, device=x.device)
-        C = self.C
-        C.zero_()
-        # C = torch.zeros((prod(x.shape[:-1]), self.m), dtype=torch.half, device=x.device)
-        marlin.mul(x, self.qw, C, self.s, self.workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
-        C = C[:x.shape[0]].view(shape[:-1] + (-1,))
+        # if self.C.shape[0] < x.shape[0]:
+        #     # print(self.C.shape, x.shape)
+        #     self.C = torch.empty((x.shape[0], self.m), dtype=torch.half, device=x.device)
+        # self.C.zero_()
+        # C = self.C[:x.shape[0]]
+        # # C.zero_()
+        C = torch.zeros((x.shape[0], self.m), dtype=torch.half, device=x.device)
+        workspace = torch.zeros(self.m // 128 * 16, device=x.device)
+        marlin.mul(x, self.qw, C, self.s, workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
+        C = C.view(shape[:-1] + (-1,))
         # print(shape, C.shape)
         return C

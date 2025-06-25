@@ -76,13 +76,14 @@ def make_quantizer(device, scale):
     
 class QLinear(nn.Linear):
     def add_quantizer(self, device, in_scale, w_scale, o_scale=None, name=None):
-        self.in_q = make_quantizer(device, in_scale)
-        self.w_q = make_quantizer(device, w_scale)
-        self.o_q = make_quantizer(device, o_scale)
+        # self.in_q = make_quantizer(device, in_scale)
+        # self.w_q = make_quantizer(device, w_scale)
+        # self.o_q = make_quantizer(device, o_scale)
         self.name = name
         # qw = self.w_q(self.weight)
         self.qlinear = MarlinLinear(self.weight.T)
-    
+        # del self.weight
+
     def forward(self, x):
         # if self.weight.shape[0] > 30000:
           # return torch.nn.functional.linear(x, self.weight)

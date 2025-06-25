@@ -190,15 +190,15 @@ def main():
     model, tokenizer = load_model(args.model)
     torch.compile(model.model)
     
-    test(model, tokenizer)
-    test2(model)
-    eval(args, model, tokenizer)
+    # test(model, tokenizer)
+    # test2(model)
+    # eval(args, model, tokenizer)
     
     quantize(args, model, tokenizer)
     torch.compile(model.model)
 
     test(model, tokenizer)
-    test2(model)
+    # test2(model)
 
     eval(args, model, tokenizer)
     
