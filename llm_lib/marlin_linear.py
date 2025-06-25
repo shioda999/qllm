@@ -72,8 +72,8 @@ class MarlinLinear:
         self.sms = sms
         self.m = m
         _, qw, s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
-        self.qw = torch.nn.Paramter(qw, False)
-        self.s = torch.nn.Paramter(s, False)
+        self.qw = torch.nn.Parameter(qw, False)
+        self.s = torch.nn.Parameter(s, False)
         
         # self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
     

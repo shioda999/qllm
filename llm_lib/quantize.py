@@ -14,6 +14,7 @@ from .gptq import GPTQ
 from .marlin_linear import MarlinLinear
 import torch
 import psutil
+import marlin
 
 # import torch.nn.quantized.functional as qF
 # import torch.nn.quantized as nnq
@@ -81,7 +82,16 @@ class QLinear(nn.Linear):
         # self.o_q = make_quantizer(device, o_scale)
         self.name = name
         # qw = self.w_q(self.weight)
-        self.qlinear = MarlinLinear(self.weight.T)
+
+        # self.qlinear = MarlinLinear(self.weight.T)
+        groupsize = 128
+        maxq = 2 ** 4 - 1
+        w = self.weight
+        s = torch.max(torch.abs(w), 0, keepdim=True)[0]
+        s *= 2 / maxq
+        s = s.reshape((-1, w.shape[1])).contiguous()
+        self.qlinear = marlin.Layer(w.shape[0], w.shape[1], groupsize=groupsize)
+        self.qlinear.pack(self, s)
         # del self.weight
 
     def forward(self, x):
