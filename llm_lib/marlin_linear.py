@@ -42,8 +42,8 @@ def gen_quant4(w, groupsize=-1, dev=torch.device("cuda")):
     layer.B = torch.empty((m // 16, n * 16 // 8), dtype=torch.int, device=dev)
     layer.s = torch.empty((m // groupsize, n), dtype=torch.half, device=dev)
     layer.pack(linear, s.t())
-    q = layer.B
-    s = layer.s
+    q = layer.B.clone()
+    s = layer.s.clone()
     return ref, q, s
 
 class MarlinLinear:
@@ -71,22 +71,14 @@ class MarlinLinear:
         self.thread_n = thread_n
         self.sms = sms
         self.m = m
-        _, self.qw, self.s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
+        _, qw, s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
+        self.qw = torch.nn.Paramter(qw, False)
+        self.s = torch.nn.Paramter(s, False)
         
         # self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
     
     def __call__(self, x):
-        shape = x.shape
-        x = x.view(-1, x.shape[-1])
-        # if self.C.shape[0] < x.shape[0]:
-        #     # print(self.C.shape, x.shape)
-        #     self.C = torch.empty((x.shape[0], self.m), dtype=torch.half, device=x.device)
-        # self.C.zero_()
-        # C = self.C[:x.shape[0]]
-        # # C.zero_()
-        C = torch.zeros((x.shape[0], self.m), dtype=torch.half, device=x.device)
+        C = torch.zeros((*x.shape[:-1], self.m), dtype=torch.half, device=x.device)
         workspace = torch.zeros(self.m // 128 * 16, device=x.device)
-        marlin.mul(x, self.qw, C, self.s, workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
-        C = C.view(shape[:-1] + (-1,))
-        # print(shape, C.shape)
+        marlin.mul(x.view(-1, x.shape[-1]), self.qw, C.view(-1, C.shape[-1]), self.s, workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
         return C
