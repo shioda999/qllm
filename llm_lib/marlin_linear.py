@@ -66,7 +66,7 @@ class MarlinLinear:
         #     SMS = 48
         else:
             SMS = -1
-        thread_k, thread_n, sms = 64, 64, SMS
+        thread_k, thread_n, sms = 64, 256, SMS
         # thread_k, thread_n, sms = -1, -1, SMS
         self.thread_k = thread_k
         self.thread_n = thread_n

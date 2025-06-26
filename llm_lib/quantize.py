@@ -123,8 +123,8 @@ def quantize_model(model, act_scales={}, mode="static", down_proj_in_scale_mul=0
         if isinstance(m, nn.Linear) and m.weight.shape[0] < 30000:
             #print(name, get_depth(name))
             name_list = [
-                "qkv_proj",
-                "o_proj",
+                # "qkv_proj",
+                # "o_proj",
                 # "down_proj",
                 # "gate_up_proj",
                 # "gate_proj",
