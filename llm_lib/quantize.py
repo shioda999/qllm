@@ -83,19 +83,19 @@ class QLinear(nn.Linear):
         self.name = name
         # qw = self.w_q(self.weight)
 
-        # self.qlinear = MarlinLinear(self.weight.T)
-        groupsize = 128
-        maxq = 2 ** 4 - 1
-        w = self.weight
-        if groupsize != -1:
-            w = w.reshape((-1, groupsize, n))
-            w = w.permute(1, 0, 2)
-            w = w.reshape((groupsize, -1))
-        s = torch.max(torch.abs(w), 0, keepdim=True)[0]
-        s *= 2 / maxq
-        s = s.reshape((-1, w.shape[1])).contiguous()
-        self.qlinear = marlin.Layer(self.weight.shape[0], self.weight.shape[1], groupsize=groupsize)
-        self.qlinear.pack(self, s)
+        self.qlinear = MarlinLinear(self.weight.T)
+        # groupsize = 128
+        # maxq = 2 ** 4 - 1
+        # w = self.weight
+        # if groupsize != -1:
+        #     w = w.reshape((-1, groupsize, w.shape[-1]))
+        #     w = w.permute(1, 0, 2)
+        #     w = w.reshape((groupsize, -1))
+        # s = torch.max(torch.abs(w), 0, keepdim=True)[0]
+        # s *= 2 / maxq
+        # s = s.reshape((-1, w.shape[1])).contiguous()
+        # self.qlinear = marlin.Layer(self.weight.shape[0], self.weight.shape[1], groupsize=groupsize)
+        # self.qlinear.pack(self, s)
         # del self.weight
 
     def forward(self, x):

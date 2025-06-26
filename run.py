@@ -194,6 +194,7 @@ def main():
     # test(model, tokenizer)
     # test2(model)
     eval(args, model, tokenizer)
+    eval(args, model, tokenizer)
     
     quantize(args, model, tokenizer)
     torch.compile(model.model)
@@ -201,6 +202,7 @@ def main():
     # test(model, tokenizer)
     # test2(model)
 
+    eval(args, model, tokenizer)
     eval(args, model, tokenizer)
     
 if __name__ == '__main__':
