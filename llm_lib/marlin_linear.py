@@ -44,6 +44,7 @@ def gen_quant4(w, groupsize=-1, dev=torch.device("cuda")):
     layer.pack(linear, s.t())
     q = layer.B.clone()
     s = layer.s.clone()
+    del layer
     return ref, q, s
 
 class MarlinLinear:
@@ -65,8 +66,8 @@ class MarlinLinear:
         #     SMS = 48
         else:
             SMS = -1
-        # thread_k, thread_n, sms = 128, 128, SMS
-        thread_k, thread_n, sms = -1, -1, SMS
+        thread_k, thread_n, sms = 64, 64, SMS
+        # thread_k, thread_n, sms = -1, -1, SMS
         self.thread_k = thread_k
         self.thread_n = thread_n
         self.sms = sms
@@ -74,6 +75,7 @@ class MarlinLinear:
         _, qw, s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
         self.qw = torch.nn.Parameter(qw, False)
         self.s = torch.nn.Parameter(s, False)
+        torch.cuda.empty_cache()
         
         # self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
     
