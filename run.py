@@ -48,7 +48,8 @@ def load_model(model_name):
 def test_text_generation(model, tokenizer):
     messages = [
         {"role": "system", "content": "You are chatbot."},
-        {"role": "user", "content": "Please Introduce yourself."},
+        {"role": "user", "content": "List numbers from 1 to 100, each numbers is separated by comma."},
+        # {"role": "user", "content": "Please Introduce yourself."},
         # {"role": "user", "content": "Please talk about global warming as long as you can."},
     ]
     # messages = [
@@ -127,10 +128,10 @@ def eval(args, model, tokenizer):
         with ExecutionTimer():
             test_text_generation(model, tokenizer)
             
-    if args.eval_ppl:
-        with ExecutionTimer():
-            model.seqlen = 2048
-            eval_ppl(model, tokenizer, datasets=["wikitext2"])
+    # if args.eval_ppl:
+    #     with ExecutionTimer():
+    #         model.seqlen = 2048
+    #         eval_ppl(model, tokenizer, datasets=["wikitext2"])
 
 def benchmark(f, warmup=1, iter=10):
     for i in range(warmup + iter):
@@ -192,12 +193,12 @@ def main():
     
     # test(model, tokenizer)
     # test2(model)
-    # eval(args, model, tokenizer)
+    eval(args, model, tokenizer)
     
     quantize(args, model, tokenizer)
     torch.compile(model.model)
 
-    test(model, tokenizer)
+    # test(model, tokenizer)
     # test2(model)
 
     eval(args, model, tokenizer)
