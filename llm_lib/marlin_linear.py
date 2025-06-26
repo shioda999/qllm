@@ -62,8 +62,8 @@ class MarlinLinear:
             SMS = 82
         elif 'A6000' in gpu:
             SMS = 84
-        # elif 'L4' in gpu:
-        #     SMS = 48
+        elif 'L4' in gpu:
+            SMS = 48
         else:
             SMS = -1
         thread_k, thread_n, sms = 64, 256, SMS
@@ -75,12 +75,13 @@ class MarlinLinear:
         _, qw, s = gen_quant4(w, groupsize=self.groupsize, dev=w.device)
         self.qw = torch.nn.Parameter(qw, False)
         self.s = torch.nn.Parameter(s, False)
+        self.workspace_width = self.m // 128 * 16
         torch.cuda.empty_cache()
         
         # self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
     
     def __call__(self, x):
         C = torch.zeros((*x.shape[:-1], self.m), dtype=torch.half, device=x.device)
-        workspace = torch.zeros(self.m // 128 * 16, device=x.device)
-        marlin.mul(x.view(-1, x.shape[-1]), self.qw, C.view(-1, C.shape[-1]), self.s, workspace, self.thread_k, self.thread_n, -1)  # 修正: A → x
+        workspace = torch.zeros(self.workspace_width, device=x.device)
+        marlin.mul(x.view(-1, x.shape[-1]), self.qw, C.view(-1, C.shape[-1]), self.s, workspace, self.thread_k, self.thread_n, self.sms)  # 修正: A → x
         return C

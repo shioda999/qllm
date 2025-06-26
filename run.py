@@ -48,7 +48,7 @@ def load_model(model_name):
 def test_text_generation(model, tokenizer):
     messages = [
         {"role": "system", "content": "You are chatbot."},
-        {"role": "user", "content": "List numbers from 1 to 10, each numbers is separated by comma."},
+        {"role": "user", "content": "List numbers from 1 to 100, each numbers is separated by comma."},
         # {"role": "user", "content": "Please Introduce yourself."},
         # {"role": "user", "content": "Please talk about global warming as long as you can."},
     ]
@@ -194,20 +194,20 @@ def main():
     # test(model, tokenizer)
     # test2(model)
     eval(args, model, tokenizer)
+    eval(args, model, tokenizer)
 
-    log_dir = "./log"
-    with torch.profiler.profile(
-        activities=[
-            torch.profiler.ProfilerActivity.CPU,
-            torch.profiler.ProfilerActivity.CUDA
-        ],
-        schedule=torch.profiler.schedule(wait=1, warmup=1, active=3),
-        on_trace_ready=torch.profiler.tensorboard_trace_handler(log_dir),
-        record_shapes=True,
-        with_stack=True
-    ) as prof:
-        eval(args, model, tokenizer)
-        prof.step()
+    # log_dir = "./log"
+    # with torch.profiler.profile(
+    #     activities=[
+    #         torch.profiler.ProfilerActivity.CPU,
+    #         torch.profiler.ProfilerActivity.CUDA
+    #     ],
+    #     on_trace_ready=torch.profiler.tensorboard_trace_handler(log_dir),
+    #     record_shapes=True,
+    #     with_stack=True
+    # ) as prof:
+    #     eval(args, model, tokenizer)
+    #     prof.step()
 
     test2(model)
     
@@ -217,19 +217,19 @@ def main():
     # test(model, tokenizer)
 
     eval(args, model, tokenizer)
-    log_dir = "./log2"
-    with torch.profiler.profile(
-        activities=[
-            torch.profiler.ProfilerActivity.CPU,
-            torch.profiler.ProfilerActivity.CUDA
-        ],
-        schedule=torch.profiler.schedule(wait=1, warmup=1, active=3),
-        on_trace_ready=torch.profiler.tensorboard_trace_handler(log_dir),
-        record_shapes=True,
-        with_stack=True
-    ) as prof:
-        eval(args, model, tokenizer)
-        prof.step()
+    eval(args, model, tokenizer)
+    # log_dir = "./log2"
+    # with torch.profiler.profile(
+    #     activities=[
+    #         torch.profiler.ProfilerActivity.CPU,
+    #         torch.profiler.ProfilerActivity.CUDA
+    #     ],
+    #     on_trace_ready=torch.profiler.tensorboard_trace_handler(log_dir),
+    #     record_shapes=True,
+    #     with_stack=True
+    # ) as prof:
+    #     eval(args, model, tokenizer)
+    #     prof.step()
 
     test2(model)
     
