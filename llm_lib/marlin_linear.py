@@ -78,10 +78,17 @@ class MarlinLinear:
         self.workspace_width = self.m // 128 * 16
         torch.cuda.empty_cache()
         
-        # self.C = torch.zeros((1,self.m), dtype=torch.half, device=w.device)
+        self.C = torch.zeros((1, 1, self.m), dtype=torch.half, device=w.device)
+        self.workspace = torch.zeros(self.workspace_width, device=w.device)
     
     def __call__(self, x):
-        C = torch.zeros((*x.shape[:-1], self.m), dtype=torch.half, device=x.device)
-        workspace = torch.zeros(self.workspace_width, device=x.device)
+        # C = torch.zeros((*x.shape[:-1], self.m), dtype=torch.half, device=x.device)
+        # workspace = torch.zeros(self.workspace_width, device=x.device)
+        if x.shape[:-1] != self.C.shape[:-1]:
+            self.C = torch.zeros((*x.shape[:-1], self.m), dtype=torch.half, device=x.device)
+        C = self.C
+        workspace = self.workspace
         marlin.mul(x.view(-1, x.shape[-1]), self.qw, C.view(-1, C.shape[-1]), self.s, workspace, self.thread_k, self.thread_n, self.sms)  # 修正: A → x
         return C
+    
+# 明らかにzerosが遅い
